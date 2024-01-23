@@ -4,20 +4,8 @@ let defaultViewMatrix = [-0.99,-0.02,-0.02,0,0.02,-1,-0.01,0,-0.02,0,1.01,0,-0.1
 let cameras = [
     {
         id: 0,
-        img_name: "00001",
-        width: 512,
-        height: 512,
-        position: [
-            -0.23,0.62,8.51,
-        ],
-        rotation: [
-            [-1,-0.02,0.01],
-            [0.01,-0.99,-0.1],
-            [0.02,-0.09,1],
-        ],
-        // [-1,-0.02,0.01,0,0.01,-0.99,-0.1,0,0.02,-0.09,1,0,-0.23,0.62,8.51,1]
-        fy: 500,
-        fx: 500,
+        fy: 850,
+        fx: 850,
     },
     {
         id: 1,
@@ -742,23 +730,24 @@ async function main() {
     try {
         carousel = false;
     } catch (err) {}
-    const url = new URL(
-        // "nike.splat",
-        // location.href,
-        params.get("url") || "train.splat",
-        "https://huggingface.co/cakewalk/splat-data/resolve/main/",
-    );
-    const req = await fetch(url, {
-        mode: "cors", // no-cors, *cors, same-origin
-        credentials: "omit", // include, *same-origin, omit
-    });
-    console.log(req);
-    if (req.status != 200)
-        throw new Error(req.status + " Unable to load " + req.url);
+    // const url = new URL(
+    //     // "nike.splat",
+    //     // location.href,
+    //     params.get("url") || "train.splat",
+    //     "https://huggingface.co/cakewalk/splat-data/resolve/main/",
+    // );
+    // const req = await fetch(url, {
+    //     mode: "cors", // no-cors, *cors, same-origin
+    //     credentials: "omit", // include, *same-origin, omit
+    // });
+    // console.log(req);
+    // if (req.status != 200)
+    //     throw new Error(req.status + " Unable to load " + req.url);
 
     const rowLength = 3 * 4 + 3 * 4 + 4 + 4;
-    const reader = req.body.getReader();
-    let splatData = new Uint8Array(req.headers.get("content-length"));
+    // const reader = req.body.getReader();
+    // let splatData = new Uint8Array(req.headers.get("content-length"));
+    let splatData = new Uint8Array(rowLength * 500);
 
     const downsample =
         splatData.length / rowLength > 500000 ? 1 : 1 / devicePixelRatio;
@@ -777,6 +766,8 @@ async function main() {
     const camid = document.getElementById("camid");
     const focal_x = document.getElementById("focal-x");
     const focal_y = document.getElementById("focal-y");
+    const inner_width = document.getElementById("inner-width");
+    const inner_height = document.getElementById("inner-height");
 
     let projectionMatrix;
 
@@ -918,6 +909,12 @@ async function main() {
 
     let activeKeys = [];
 	let currentCameraIndex = 0;
+
+    camid.innerText = "cam  " + currentCameraIndex;
+    focal_x.innerText = "focal_x  " + camera.fx;
+    focal_y.innerText = "focal_y  " + camera.fy;
+    inner_width.innerText = "inner_width  " + innerWidth;
+    inner_height.innerText = "inner_height  " + innerHeight;
 
     window.addEventListener("keydown", (e) => {
         // if (document.activeElement != document.body) return;
@@ -1442,30 +1439,30 @@ async function main() {
         selectFile(e.dataTransfer.files[0]);
     });
 
-    let bytesRead = 0;
-    let lastVertexCount = -1;
-    let stopLoading = false;
+    // let bytesRead = 0;
+    // let lastVertexCount = -1;
+    // let stopLoading = false;
 
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done || stopLoading) break;
+    // while (true) {
+    //     const { done, value } = await reader.read();
+    //     if (done || stopLoading) break;
 
-        splatData.set(value, bytesRead);
-        bytesRead += value.length;
+    //     splatData.set(value, bytesRead);
+    //     bytesRead += value.length;
 
-        if (vertexCount > lastVertexCount) {
-            worker.postMessage({
-                buffer: splatData.buffer,
-                vertexCount: Math.floor(bytesRead / rowLength),
-            });
-            lastVertexCount = vertexCount;
-        }
-    }
-    if (!stopLoading)
-        worker.postMessage({
-            buffer: splatData.buffer,
-            vertexCount: Math.floor(bytesRead / rowLength),
-        });
+    //     if (vertexCount > lastVertexCount) {
+    //         worker.postMessage({
+    //             buffer: splatData.buffer,
+    //             vertexCount: Math.floor(bytesRead / rowLength),
+    //         });
+    //         lastVertexCount = vertexCount;
+    //     }
+    // }
+    // if (!stopLoading)
+    //     worker.postMessage({
+    //         buffer: splatData.buffer,
+    //         vertexCount: Math.floor(bytesRead / rowLength),
+    //     });
 }
 
 main().catch((err) => {
