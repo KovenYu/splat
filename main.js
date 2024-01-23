@@ -1,19 +1,23 @@
+
+let defaultViewMatrix = [-0.99,-0.02,-0.02,0,0.02,-1,-0.01,0,-0.02,0,1.01,0,-0.12,0.23,6.6,1];
+
 let cameras = [
     {
         id: 0,
         img_name: "00001",
-        width: 1959,
-        height: 1090,
+        width: 512,
+        height: 512,
         position: [
-            -3.0089893469241797, -0.11086489695181866, -3.7527640949141428,
+            -0.23,0.62,8.51,
         ],
         rotation: [
-            [0.876134201218856, 0.06925962026449776, 0.47706599800804744],
-            [-0.04747421839895102, 0.9972110940209488, -0.057586739349882114],
-            [-0.4797239414934443, 0.027805376500959853, 0.8769787916452908],
+            [-1,-0.02,0.01],
+            [0.01,-0.99,-0.1],
+            [0.02,-0.09,1],
         ],
-        fy: 1164.6601287484507,
-        fx: 1159.5880733038064,
+        // [-1,-0.02,0.01,0,0.01,-0.99,-0.1,0,0.02,-0.09,1,0,-0.23,0.62,8.51,1]
+        fy: 500,
+        fx: 500,
     },
     {
         id: 1,
@@ -731,16 +735,11 @@ void main () {
 
 `.trim();
 
-let defaultViewMatrix = [
-    0.47, 0.04, 0.88, 0, -0.11, 0.99, 0.02, 0, -0.88, -0.11, 0.47, 0, 0.07,
-    0.03, 6.55, 1,
-];
 let viewMatrix = defaultViewMatrix;
 async function main() {
     let carousel = true;
     const params = new URLSearchParams(location.search);
     try {
-        viewMatrix = JSON.parse(decodeURIComponent(location.hash.slice(1)));
         carousel = false;
     } catch (err) {}
     const url = new URL(
@@ -776,6 +775,8 @@ async function main() {
     const canvas = document.getElementById("canvas");
     const fps = document.getElementById("fps");
     const camid = document.getElementById("camid");
+    const focal_x = document.getElementById("focal-x");
+    const focal_y = document.getElementById("focal-y");
 
     let projectionMatrix;
 
@@ -949,6 +950,8 @@ async function main() {
 			viewMatrix = getViewMatrix(cameras[currentCameraIndex]);
 		}
         camid.innerText = "cam  " + currentCameraIndex;
+        focal_x.innerText = "focal_x  " + camera.fx;
+        focal_y.innerText = "focal_y  " + camera.fy;
         if (e.code == "KeyV") {
             location.hash =
                 "#" +
@@ -960,6 +963,7 @@ async function main() {
             carousel = true;
             camid.innerText =""
         }
+
     });
     function updateCamera() {
         // Update the projection matrix or any other relevant properties of the camera
