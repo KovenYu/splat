@@ -1,5 +1,11 @@
 
-let defaultViewMatrix = [-0.99,-0.02,-0.02,0,0.02,-1,-0.01,0,-0.02,0,1.01,0,-0.12,0.23,6.6,1];
+let defaultViewMatrix = [-1,0,0,0,
+                        0,-1,0,0,
+                        0,0,1,0,
+                        0,0,0,1];
+
+// you should set camera to the identity matrix to align with the generation camera, then you can tell if the focal is correct
+// by comparing to the original image
 
 let cameras = [
     {
