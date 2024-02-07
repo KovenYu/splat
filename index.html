@@ -19,11 +19,10 @@
 				height: 100vh;
 				width: 100vw;
 				font-family: sans-serif;
-				background: black;
-    			text-shadow: 0 0 3px black;
+				background: rgb(255, 255, 255);
 			}
 			a, body {
-				color: white;
+				color: rgb(0, 0, 0);
 			}
 			#info {
 				z-index: 100;
@@ -193,14 +192,6 @@
 		</script>
 		<div id="info">
 			<h3 class="nohf">WebGL 3D Gaussian Splat Viewer</h3>
-			<p>
-			<small class="nohf">
-				By <a href="https://twitter.com/antimatter15">Kevin Kwok</a>.
-				Code on
-				<a href="https://github.com/antimatter15/splat">Github</a
-				>.
-			</small>
-		</p>
 
 			<details>
 			<summary>Use mouse or arrow keys to navigate.</summary>
@@ -208,32 +199,17 @@
 <div id="instructions">movement (arrow keys)
 - left/right arrow keys to strafe side to side
 - up/down arrow keys to move forward/back
+- shift + up/down to move up/down
 - space to jump
 
 camera angle (wasd)
-- a/d to turn camera left/right
-- w/s to tilt camera up/down
-- q/e to roll camera counterclockwise/clockwise
+- w/s/a/d to rotate camera
+- q/e to roll camera
 - i/k and j/l to orbit
-
-trackpad
-- scroll up/down/left/right to orbit
-- pinch to move forward/back
-- ctrl key + scroll to move forward/back
-- shift + scroll to move up/down or strafe
 
 mouse
 - click and drag to orbit
 - right click (or ctrl/cmd key) and drag up/down to move
-
-touch (mobile)
-- one finger to orbit
-- two finger pinch to move forward/back
-- two finger rotate to rotate camera clockwise/counterclockwise
-- two finger pan to move side-to-side and up-down
-
-gamepad
-- if you have a game controller connected it should work
 
 other
 - press 0-9 to switch to one of the pre-loaded camera views
