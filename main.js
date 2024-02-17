@@ -31,6 +31,32 @@ let cameras = [
         fy: 850,
         fx: 850,
     },
+    {
+        id: 2,
+        position: [
+            0, 0, 0   // +left, +up, +forward
+        ],
+        rotation: [
+            [1, 0, 0],
+            [0., 1, 0],
+            [0, 0, 1],
+        ],
+        fy: 990,
+        fx: 990,
+    },
+    {
+        id: 3,
+        position: [
+            -0.32087376713752747, 0.0, 0.014009651727974415   // +left, +up, +forward
+        ],
+        rotation: [
+            [4226182699203491, 0.0, -0.9063078165054321],
+            [0.0, 1.0, -0.0],
+            [0.9063078165054321, 0.0, 0.4226182699203491],
+        ],
+        fy: 990,
+        fx: 990,
+    },
 ];
 
 let camera = cameras[0];
@@ -611,24 +637,7 @@ void main () {
 
 let viewMatrix = defaultViewMatrix;
 async function main() {
-    let carousel = true;
     const params = new URLSearchParams(location.search);
-    try {
-        carousel = false;
-    } catch (err) {}
-    // const url = new URL(
-    //     // "nike.splat",
-    //     // location.href,
-    //     params.get("url") || "train.splat",
-    //     "https://huggingface.co/cakewalk/splat-data/resolve/main/",
-    // );
-    // const req = await fetch(url, {
-    //     mode: "cors", // no-cors, *cors, same-origin
-    //     credentials: "omit", // include, *same-origin, omit
-    // });
-    // console.log(req);
-    // if (req.status != 200)
-    //     throw new Error(req.status + " Unable to load " + req.url);
 
     const rowLength = 3 * 4 + 3 * 4 + 4 + 4;
     // const reader = req.body.getReader();
@@ -817,7 +826,11 @@ async function main() {
             camera.fy -= 10; // Adjust 10 to your desired decrement value
             updateCamera();
         }
-        carousel = false;
+
+        if (e.code === "KeyU") {
+            updateCamera();
+        }
+
         if (!activeKeys.includes(e.code)) activeKeys.push(e.code);
         if (/\d/.test(e.key)) {
             currentCameraIndex = parseInt(e.key)
@@ -843,7 +856,6 @@ async function main() {
                 );
                 camid.innerText =""
         } else if (e.code === "KeyP") {
-            carousel = true;
             camid.innerText =""
         }
 
@@ -865,7 +877,6 @@ async function main() {
     window.addEventListener(
         "wheel",
         (e) => {
-            carousel = false;
             e.preventDefault();
             const lineHeight = 10;
             const scale =
@@ -908,14 +919,12 @@ async function main() {
 
     let startX, startY, down;
     canvas.addEventListener("mousedown", (e) => {
-        carousel = false;
         e.preventDefault();
         startX = e.clientX;
         startY = e.clientY;
         down = e.ctrlKey || e.metaKey ? 2 : 1;
     });
     canvas.addEventListener("contextmenu", (e) => {
-        carousel = false;
         e.preventDefault();
         startX = e.clientX;
         startY = e.clientY;
@@ -972,13 +981,11 @@ async function main() {
         (e) => {
             e.preventDefault();
             if (e.touches.length === 1) {
-                carousel = false;
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
                 down = 1;
             } else if (e.touches.length === 2) {
                 // console.log('beep')
-                carousel = false;
                 startX = e.touches[0].clientX;
                 altX = e.touches[1].clientX;
                 startY = e.touches[0].clientY;
@@ -1126,55 +1133,44 @@ async function main() {
             // Assuming the left stick controls translation (axes 0 and 1)
             if (Math.abs(gamepad.axes[0]) > axisThreshold) {
                 inv = translate4(inv, moveSpeed * gamepad.axes[0], 0, 0);
-                carousel = false;
             }
             if (Math.abs(gamepad.axes[1]) > axisThreshold) {
                 inv = translate4(inv, 0, 0, -moveSpeed * gamepad.axes[1]);
-                carousel = false;
             }
             if(gamepad.buttons[12].pressed || gamepad.buttons[13].pressed){
                 inv = translate4(inv, 0, -moveSpeed*(gamepad.buttons[12].pressed - gamepad.buttons[13].pressed), 0);
-                carousel = false;
             }
 
             if(gamepad.buttons[14].pressed || gamepad.buttons[15].pressed){
                 inv = translate4(inv, -moveSpeed*(gamepad.buttons[14].pressed - gamepad.buttons[15].pressed), 0, 0);
-                carousel = false;
             }
 
             // Assuming the right stick controls rotation (axes 2 and 3)
             if (Math.abs(gamepad.axes[2]) > axisThreshold) {
                 inv = rotate4(inv, rotateSpeed * gamepad.axes[2], 0, 1, 0);
-                carousel = false;
             }
             if (Math.abs(gamepad.axes[3]) > axisThreshold) {
                 inv = rotate4(inv, -rotateSpeed * gamepad.axes[3], 1, 0, 0);
-                carousel = false;
             }
 
             let tiltAxis = gamepad.buttons[6].value - gamepad.buttons[7].value;
             if (Math.abs(tiltAxis) > axisThreshold) {
                 inv = rotate4(inv, rotateSpeed * tiltAxis, 0, 0, 1);
-                carousel = false;
             }
             if (gamepad.buttons[4].pressed && !leftGamepadTrigger) {
                 camera = cameras[(cameras.indexOf(camera)+1)%cameras.length]
                 inv = invert4(getViewMatrix(camera));
-                carousel = false;
             }
             if (gamepad.buttons[5].pressed && !rightGamepadTrigger) {
                 camera = cameras[(cameras.indexOf(camera)+cameras.length-1)%cameras.length]
                 inv = invert4(getViewMatrix(camera));
-                carousel = false;
             }
             leftGamepadTrigger = gamepad.buttons[4].pressed;
             rightGamepadTrigger = gamepad.buttons[5].pressed;
             if (gamepad.buttons[0].pressed) {
                 isJumping = true;
-                carousel = false;
             }
             if(gamepad.buttons[3].pressed){
-                carousel = true;
             }
         }
 
@@ -1209,16 +1205,6 @@ async function main() {
         }
 
         viewMatrix = invert4(inv);
-
-        if (carousel) {
-            let inv = invert4(defaultViewMatrix);
-
-            const t = Math.sin((Date.now() - start) / 5000);
-            inv = translate4(inv, 2.5 * t, 0, 6 * (1 - Math.cos(t)));
-            inv = rotate4(inv, -0.6 * t, 0, 1, 0);
-
-            viewMatrix = invert4(inv);
-        }
 
         if (isJumping) {
             jumpDelta = Math.min(1, jumpDelta + 0.05);
@@ -1308,7 +1294,6 @@ async function main() {
     window.addEventListener("hashchange", (e) => {
         try {
             viewMatrix = JSON.parse(decodeURIComponent(location.hash.slice(1)));
-            carousel = false;
         } catch (err) {}
     });
 
