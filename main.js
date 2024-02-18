@@ -4,7 +4,7 @@ let defaultViewMatrix = [-1,0,0,0,
                         0,0,1,0,
                         0,0,0,1];
 
-let cameras = [
+const cameras = [
     {
         id: 0,
         position: [
@@ -15,8 +15,8 @@ let cameras = [
             [0., -1, 0],
             [0, 0, 1],
         ],
-        fy: 850,
-        fx: 850,
+        fy: 500,
+        fx: 500,
     },
     {
         id: 1,
@@ -28,8 +28,8 @@ let cameras = [
             [0., 0, -1],
             [0, -1, 0],
         ],
-        fy: 850,
-        fx: 850,
+        fy: 500,
+        fx: 500,
     },
     {
         id: 2,
@@ -44,26 +44,11 @@ let cameras = [
         fy: 990,
         fx: 990,
     },
-    {
-        id: 3,
-        position: [
-            -0.32087376713752747, 0.0, 0.014009651727974415   // +left, +up, +forward
-        ],
-        rotation: [
-            [4226182699203491, 0.0, -0.9063078165054321],
-            [0.0, 1.0, -0.0],
-            [0.9063078165054321, 0.0, 0.4226182699203491],
-        ],
-        fy: 990,
-        fx: 990,
-    },
 ];
 
-let camera = cameras[0];
-
 function getProjectionMatrix(fx, fy, width, height) {
-    const znear = 0.2;
-    const zfar = 200;
+    const znear = 0.01;
+    const zfar = 100;
     return [
         [(2 * fx) / width, 0, 0, 0],
         [0, -(2 * fy) / height, 0, 0],
@@ -594,7 +579,9 @@ void main () {
     );
 
     mat3 T = transpose(mat3(view)) * J;
-    mat3 cov2d = transpose(T) * Vrk * T;
+    mat3 diag = mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+    float dilation = 1.0;
+    mat3 cov2d = transpose(T) * Vrk * T + diag * dilation;
 
     float mid = (cov2d[0][0] + cov2d[1][1]) / 2.0;
     float radius = length(vec2((cov2d[0][0] - cov2d[1][1]) / 2.0, cov2d[0][1]));
@@ -637,16 +624,14 @@ void main () {
 
 let viewMatrix = defaultViewMatrix;
 async function main() {
-    const params = new URLSearchParams(location.search);
-
     const rowLength = 3 * 4 + 3 * 4 + 4 + 4;
     // const reader = req.body.getReader();
     // let splatData = new Uint8Array(req.headers.get("content-length"));
     let splatData = new Uint8Array(rowLength * 500);
+    let active_camera = JSON.parse(JSON.stringify(cameras[0]));  // deep copy
 
     const downsample =
         splatData.length / rowLength > 500000 ? 1 : 1 / devicePixelRatio;
-    console.log(splatData.length / rowLength, downsample);
 
     const worker = new Worker(
         URL.createObjectURL(
@@ -664,6 +649,7 @@ async function main() {
     const inner_width = document.getElementById("inner-width");
     const inner_height = document.getElementById("inner-height");
 
+	let currentCameraIndex = 0;
     let projectionMatrix;
 
     const gl = canvas.getContext("webgl2", {
@@ -703,6 +689,7 @@ async function main() {
     );
     gl.blendEquationSeparate(gl.FUNC_ADD, gl.FUNC_ADD);
 
+    // Theses are the data passed to the shader program
     const u_projection = gl.getUniformLocation(program, "projection");
     const u_viewport = gl.getUniformLocation(program, "viewport");
     const u_focal = gl.getUniformLocation(program, "focal");
@@ -732,22 +719,43 @@ async function main() {
     gl.vertexAttribDivisor(a_index, 1);
 
     const resize = () => {
-        gl.uniform2fv(u_focal, new Float32Array([camera.fx, camera.fy]));
+        use_intrinsics(active_camera);
 
+        gl.uniform2fv(u_viewport, new Float32Array([innerWidth, innerHeight]));
+        gl.canvas.width = Math.round(innerWidth / downsample);
+        gl.canvas.height = Math.round(innerHeight / downsample);
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+        update_displayed_info(active_camera);
+    };
+
+    const use_camera = (camera) => {
+        use_intrinsics(camera);
+        use_extrinsics(camera);
+    };
+
+    const use_intrinsics = (camera) => {
+        gl.uniform2fv(u_focal, new Float32Array([camera.fx, camera.fy]));
         projectionMatrix = getProjectionMatrix(
             camera.fx,
             camera.fy,
             innerWidth,
             innerHeight,
         );
-
-        gl.uniform2fv(u_viewport, new Float32Array([innerWidth, innerHeight]));
-
-        gl.canvas.width = Math.round(innerWidth / downsample);
-        gl.canvas.height = Math.round(innerHeight / downsample);
-        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
         gl.uniformMatrix4fv(u_projection, false, projectionMatrix);
+    };
+
+    const use_extrinsics = (camera) => {
+        viewMatrix = getViewMatrix(camera);
+        gl.uniformMatrix4fv(u_view, false, viewMatrix);
+    };
+
+    const update_displayed_info = (camera) => {
+        camid.innerText = "cam  " + currentCameraIndex;
+        focal_x.innerText = "focal_x  " + camera.fx;
+        focal_y.innerText = "focal_y  " + camera.fy;
+        inner_width.innerText = "inner_width  " + innerWidth;
+        inner_height.innerText = "inner_height  " + innerHeight;
     };
 
     window.addEventListener("resize", resize);
@@ -803,73 +811,35 @@ async function main() {
     };
 
     let activeKeys = [];
-	let currentCameraIndex = 0;
-
-    camid.innerText = "cam  " + currentCameraIndex;
-    focal_x.innerText = "focal_x  " + camera.fx;
-    focal_y.innerText = "focal_y  " + camera.fy;
-    inner_width.innerText = "inner_width  " + innerWidth;
-    inner_height.innerText = "inner_height  " + innerHeight;
-
     window.addEventListener("keydown", (e) => {
         // if (document.activeElement != document.body) return;
-        // When 'F' key is pressed, increase the focal length
         if (e.code === "KeyF") {
-            camera.fx += 10; // Adjust 10 to your desired increment value
-            camera.fy += 10; // Adjust 10 to your desired increment value
-            updateCamera();
+            active_camera.fx += 10; // Adjust 10 to your desired increment value
+            active_camera.fy += 10; // Adjust 10 to your desired increment value
+            use_intrinsics(active_camera);
+            update_displayed_info(active_camera);
         }
 
-        // When 'G' key is pressed, decrease the focal length
         if (e.code === "KeyG") {
-            camera.fx -= 10; // Adjust 10 to your desired decrement value
-            camera.fy -= 10; // Adjust 10 to your desired decrement value
-            updateCamera();
-        }
-
-        if (e.code === "KeyU") {
-            updateCamera();
+            active_camera.fx -= 10; // Adjust 10 to your desired decrement value
+            active_camera.fy -= 10; // Adjust 10 to your desired decrement value
+            use_intrinsics(active_camera);
+            update_displayed_info(active_camera);
         }
 
         if (!activeKeys.includes(e.code)) activeKeys.push(e.code);
         if (/\d/.test(e.key)) {
             currentCameraIndex = parseInt(e.key)
-            camera = cameras[currentCameraIndex];
-            viewMatrix = getViewMatrix(camera);
+            active_camera = JSON.parse(JSON.stringify(cameras[currentCameraIndex]));
+            use_camera(active_camera);
+            update_displayed_info(active_camera);
         }
-		if (['-', '_'].includes(e.key)){
-			currentCameraIndex = (currentCameraIndex + cameras.length - 1) % cameras.length;
-			viewMatrix = getViewMatrix(cameras[currentCameraIndex]);
-		}
-		if (['+', '='].includes(e.key)){
-			currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-			viewMatrix = getViewMatrix(cameras[currentCameraIndex]);
-		}
-        camid.innerText = "cam  " + currentCameraIndex;
-        focal_x.innerText = "focal_x  " + camera.fx;
-        focal_y.innerText = "focal_y  " + camera.fy;
-        if (e.code == "KeyV") {
-            location.hash =
-                "#" +
-                JSON.stringify(
-                    viewMatrix.map((k) => Math.round(k * 100) / 100),
-                );
-                camid.innerText =""
-        } else if (e.code === "KeyP") {
-            camid.innerText =""
-        }
-
     });
-    function updateCamera() {
-        // Update the projection matrix or any other relevant properties of the camera
-        // This depends on how your camera's projection matrix is calculated
-        // For example:
-        projectionMatrix = getProjectionMatrix(camera.fx, camera.fy, canvas.width, canvas.height);
-        gl.uniformMatrix4fv(u_projection, false, projectionMatrix);
-    }
+
     window.addEventListener("keyup", (e) => {
         activeKeys = activeKeys.filter((k) => k !== e.code);
     });
+
     window.addEventListener("blur", () => {
         activeKeys = [];
     });
@@ -974,121 +944,12 @@ async function main() {
         startY = 0;
     });
 
-    let altX = 0,
-        altY = 0;
-    canvas.addEventListener(
-        "touchstart",
-        (e) => {
-            e.preventDefault();
-            if (e.touches.length === 1) {
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                down = 1;
-            } else if (e.touches.length === 2) {
-                // console.log('beep')
-                startX = e.touches[0].clientX;
-                altX = e.touches[1].clientX;
-                startY = e.touches[0].clientY;
-                altY = e.touches[1].clientY;
-                down = 1;
-            }
-        },
-        { passive: false },
-    );
-    canvas.addEventListener(
-        "touchmove",
-        (e) => {
-            e.preventDefault();
-            if (e.touches.length === 1 && down) {
-                let inv = invert4(viewMatrix);
-                let dx = (4 * (e.touches[0].clientX - startX)) / innerWidth;
-                let dy = (4 * (e.touches[0].clientY - startY)) / innerHeight;
-
-                let d = 4;
-                inv = translate4(inv, 0, 0, d);
-                // inv = translate4(inv,  -x, -y, -z);
-                // inv = translate4(inv,  x, y, z);
-                inv = rotate4(inv, dx, 0, 1, 0);
-                inv = rotate4(inv, -dy, 1, 0, 0);
-                inv = translate4(inv, 0, 0, -d);
-
-                viewMatrix = invert4(inv);
-
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-            } else if (e.touches.length === 2) {
-                // alert('beep')
-                const dtheta =
-                    Math.atan2(startY - altY, startX - altX) -
-                    Math.atan2(
-                        e.touches[0].clientY - e.touches[1].clientY,
-                        e.touches[0].clientX - e.touches[1].clientX,
-                    );
-                const dscale =
-                    Math.hypot(startX - altX, startY - altY) /
-                    Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY,
-                    );
-                const dx =
-                    (e.touches[0].clientX +
-                        e.touches[1].clientX -
-                        (startX + altX)) /
-                    2;
-                const dy =
-                    (e.touches[0].clientY +
-                        e.touches[1].clientY -
-                        (startY + altY)) /
-                    2;
-                let inv = invert4(viewMatrix);
-                // inv = translate4(inv,  0, 0, d);
-                inv = rotate4(inv, dtheta, 0, 0, 1);
-
-                inv = translate4(inv, -dx / innerWidth, -dy / innerHeight, 0);
-
-                // let preY = inv[13];
-                inv = translate4(inv, 0, 0, 3 * (1 - dscale));
-                // inv[13] = preY;
-
-                viewMatrix = invert4(inv);
-
-                startX = e.touches[0].clientX;
-                altX = e.touches[1].clientX;
-                startY = e.touches[0].clientY;
-                altY = e.touches[1].clientY;
-            }
-        },
-        { passive: false },
-    );
-    canvas.addEventListener(
-        "touchend",
-        (e) => {
-            e.preventDefault();
-            down = false;
-            startX = 0;
-            startY = 0;
-        },
-        { passive: false },
-    );
-
     let jumpDelta = 0;
     let vertexCount = 0;
 
     let lastFrame = 0;
     let avgFps = 0;
     let start = 0;
-
-    window.addEventListener("gamepadconnected", (e) => {
-        const gp = navigator.getGamepads()[e.gamepad.index];
-        console.log(
-            `Gamepad connected at index ${gp.index}: ${gp.id}. It has ${gp.buttons.length} buttons and ${gp.axes.length} axes.`,
-        );
-    });
-    window.addEventListener("gamepaddisconnected", (e) => {
-        console.log("Gamepad disconnected");
-    });
-
-    let leftGamepadTrigger, rightGamepadTrigger;
 
     const frame = (now) => {
         let inv = invert4(viewMatrix);
@@ -1121,59 +982,7 @@ async function main() {
         if (activeKeys.includes("KeyW")) inv = rotate4(inv, 0.005, 1, 0, 0);
         if (activeKeys.includes("KeyS")) inv = rotate4(inv, -0.005, 1, 0, 0);
 
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
         let isJumping = activeKeys.includes("Space");
-        for (let gamepad of gamepads) {
-            if (!gamepad) continue;
-
-            const axisThreshold = 0.1; // Threshold to detect when the axis is intentionally moved
-            const moveSpeed = 0.06;
-            const rotateSpeed = 0.02;
-
-            // Assuming the left stick controls translation (axes 0 and 1)
-            if (Math.abs(gamepad.axes[0]) > axisThreshold) {
-                inv = translate4(inv, moveSpeed * gamepad.axes[0], 0, 0);
-            }
-            if (Math.abs(gamepad.axes[1]) > axisThreshold) {
-                inv = translate4(inv, 0, 0, -moveSpeed * gamepad.axes[1]);
-            }
-            if(gamepad.buttons[12].pressed || gamepad.buttons[13].pressed){
-                inv = translate4(inv, 0, -moveSpeed*(gamepad.buttons[12].pressed - gamepad.buttons[13].pressed), 0);
-            }
-
-            if(gamepad.buttons[14].pressed || gamepad.buttons[15].pressed){
-                inv = translate4(inv, -moveSpeed*(gamepad.buttons[14].pressed - gamepad.buttons[15].pressed), 0, 0);
-            }
-
-            // Assuming the right stick controls rotation (axes 2 and 3)
-            if (Math.abs(gamepad.axes[2]) > axisThreshold) {
-                inv = rotate4(inv, rotateSpeed * gamepad.axes[2], 0, 1, 0);
-            }
-            if (Math.abs(gamepad.axes[3]) > axisThreshold) {
-                inv = rotate4(inv, -rotateSpeed * gamepad.axes[3], 1, 0, 0);
-            }
-
-            let tiltAxis = gamepad.buttons[6].value - gamepad.buttons[7].value;
-            if (Math.abs(tiltAxis) > axisThreshold) {
-                inv = rotate4(inv, rotateSpeed * tiltAxis, 0, 0, 1);
-            }
-            if (gamepad.buttons[4].pressed && !leftGamepadTrigger) {
-                camera = cameras[(cameras.indexOf(camera)+1)%cameras.length]
-                inv = invert4(getViewMatrix(camera));
-            }
-            if (gamepad.buttons[5].pressed && !rightGamepadTrigger) {
-                camera = cameras[(cameras.indexOf(camera)+cameras.length-1)%cameras.length]
-                inv = invert4(getViewMatrix(camera));
-            }
-            leftGamepadTrigger = gamepad.buttons[4].pressed;
-            rightGamepadTrigger = gamepad.buttons[5].pressed;
-            if (gamepad.buttons[0].pressed) {
-                isJumping = true;
-            }
-            if(gamepad.buttons[3].pressed){
-            }
-        }
-
         if (
             ["KeyJ", "KeyK", "KeyL", "KeyI"].some((k) => activeKeys.includes(k))
         ) {
@@ -1256,8 +1065,8 @@ async function main() {
                 cameras = JSON.parse(fr.result);
                 viewMatrix = getViewMatrix(cameras[0]);
                 projectionMatrix = getProjectionMatrix(
-                    camera.fx / downsample,
-                    camera.fy / downsample,
+                    active_camera.fx / downsample,
+                    active_camera.fy / downsample,
                     canvas.width,
                     canvas.height,
                 );
@@ -1309,31 +1118,6 @@ async function main() {
         e.stopPropagation();
         selectFile(e.dataTransfer.files[0]);
     });
-
-    // let bytesRead = 0;
-    // let lastVertexCount = -1;
-    // let stopLoading = false;
-
-    // while (true) {
-    //     const { done, value } = await reader.read();
-    //     if (done || stopLoading) break;
-
-    //     splatData.set(value, bytesRead);
-    //     bytesRead += value.length;
-
-    //     if (vertexCount > lastVertexCount) {
-    //         worker.postMessage({
-    //             buffer: splatData.buffer,
-    //             vertexCount: Math.floor(bytesRead / rowLength),
-    //         });
-    //         lastVertexCount = vertexCount;
-    //     }
-    // }
-    // if (!stopLoading)
-    //     worker.postMessage({
-    //         buffer: splatData.buffer,
-    //         vertexCount: Math.floor(bytesRead / rowLength),
-    //     });
 }
 
 main().catch((err) => {
