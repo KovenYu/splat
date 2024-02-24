@@ -580,7 +580,7 @@ void main () {
 
     mat3 T = transpose(mat3(view)) * J;
     mat3 diag = mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
-    float dilation = 1.0;
+    float dilation = 0.0;
     mat3 cov2d = transpose(T) * Vrk * T + diag * dilation;
 
     float mid = (cov2d[0][0] + cov2d[1][1]) / 2.0;
@@ -631,7 +631,7 @@ async function main() {
     let active_camera = JSON.parse(JSON.stringify(cameras[0]));  // deep copy
 
     const downsample =
-        splatData.length / rowLength > 500000 ? 1 : 1 / devicePixelRatio;
+        1.0;
 
     const worker = new Worker(
         URL.createObjectURL(
