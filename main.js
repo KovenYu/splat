@@ -4,6 +4,10 @@ let defaultViewMatrix = [-1,0,0,0,
                         0,0,1,0,
                         0,0,0,1];
 
+let yaw = 0;   // Rotation around the Y-axis
+let pitch = 0; // Rotation around the X-axis
+let movement =  [0, 0,0]; // Movement vector initialized to 0,0,0
+
 const cameras = [
     {
         id: 0,
@@ -748,6 +752,9 @@ async function main() {
     const use_extrinsics = (camera) => {
         viewMatrix = getViewMatrix(camera);
         gl.uniformMatrix4fv(u_view, false, viewMatrix);
+        yaw = 0;
+        pitch = 0;
+        movement = [0, 0, 0];
     };
 
     const update_displayed_info = (camera) => {
@@ -952,35 +959,40 @@ async function main() {
     let start = 0;
 
     const frame = (now) => {
-        let inv = invert4(viewMatrix);
-        let shiftKey = activeKeys.includes("Shift") || activeKeys.includes("ShiftLeft") || activeKeys.includes("ShiftRight")
+        let inv = invert4(defaultViewMatrix);
+        
+        if (activeKeys.includes("KeyA")) yaw -= 0.02;
+        if (activeKeys.includes("KeyD")) yaw += 0.02;
+        if (activeKeys.includes("KeyW")) pitch += 0.005;
+        if (activeKeys.includes("KeyS")) pitch -= 0.005;
 
-        if (activeKeys.includes("ArrowUp")) {
-            if (shiftKey) {
-                inv = translate4(inv, 0, -0.01, 0);
-            } else {
-                inv = translate4(inv, 0, 0, 0.03);
-            }
-        }
-        if (activeKeys.includes("ArrowDown")) {
-            if (shiftKey) {
-                inv = translate4(inv, 0, 0.01, 0);
-            } else {
-                inv = translate4(inv, 0, 0, -0.03);
-            }
-        }
-        if (activeKeys.includes("ArrowLeft"))
-            inv = translate4(inv, -0.03, 0, 0);
-        //
-        if (activeKeys.includes("ArrowRight"))
-            inv = translate4(inv, 0.03, 0, 0);
-        // inv = rotate4(inv, 0.01, 0, 1, 0);
-        if (activeKeys.includes("KeyA")) inv = rotate4(inv, -0.02, 0, 1, 0);
-        if (activeKeys.includes("KeyD")) inv = rotate4(inv, 0.02, 0, 1, 0);
-        if (activeKeys.includes("KeyQ")) inv = rotate4(inv, 0.01, 0, 0, 1);
-        if (activeKeys.includes("KeyE")) inv = rotate4(inv, -0.01, 0, 0, 1);
-        if (activeKeys.includes("KeyW")) inv = rotate4(inv, 0.005, 1, 0, 0);
-        if (activeKeys.includes("KeyS")) inv = rotate4(inv, -0.005, 1, 0, 0);
+        pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+
+        // Compute movement vector increment based on yaw
+        let dx = 0, dz = 0;
+        if (activeKeys.includes("ArrowUp")) dz += 0.03;
+        if (activeKeys.includes("ArrowDown")) dz -= 0.03;
+        if (activeKeys.includes("ArrowLeft")) dx -= 0.03;
+        if (activeKeys.includes("ArrowRight")) dx += 0.03;
+
+        // Convert dx and dz into world coordinates based on yaw
+        let forward = [Math.sin(yaw) * dz, 0, Math.cos(yaw) * dz];
+        let right = [Math.sin(yaw + Math.PI / 2) * dx, 0, Math.cos(yaw + Math.PI / 2) * dx];
+
+        // Update movement vector
+        movement[0] += forward[0] + right[0];
+        movement[1] += forward[1] + right[1]; // This should generally remain 0 in a FPS
+        movement[2] += forward[2] + right[2];
+
+        // Apply translation based on movement vector
+        inv = translate4(inv, ...movement);
+
+        // Apply rotations
+        inv = rotate4(inv, yaw, 0, 1, 0); // Yaw around the Y-axis
+        inv = rotate4(inv, pitch, 1, 0, 0); // Pitch around the X-axis
+
+        // Compute the view matrix
+        viewMatrix = invert4(inv);
 
         let isJumping = activeKeys.includes("Space");
         if (
