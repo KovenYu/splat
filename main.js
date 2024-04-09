@@ -970,10 +970,10 @@ async function main() {
 
         // Compute movement vector increment based on yaw
         let dx = 0, dz = 0;
-        if (activeKeys.includes("ArrowUp")) dz += 0.03;
-        if (activeKeys.includes("ArrowDown")) dz -= 0.03;
-        if (activeKeys.includes("ArrowLeft")) dx -= 0.03;
-        if (activeKeys.includes("ArrowRight")) dx += 0.03;
+        if (activeKeys.includes("ArrowUp")) dz += 0.01;
+        if (activeKeys.includes("ArrowDown")) dz -= 0.01;
+        if (activeKeys.includes("ArrowLeft")) dx -= 0.01;
+        if (activeKeys.includes("ArrowRight")) dx += 0.01;
 
         // Convert dx and dz into world coordinates based on yaw
         let forward = [Math.sin(yaw) * dz, 0, Math.cos(yaw) * dz];
