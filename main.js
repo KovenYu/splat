@@ -851,106 +851,6 @@ async function main() {
         activeKeys = [];
     });
 
-    window.addEventListener(
-        "wheel",
-        (e) => {
-            e.preventDefault();
-            const lineHeight = 10;
-            const scale =
-                e.deltaMode == 1
-                    ? lineHeight
-                    : e.deltaMode == 2
-                    ? innerHeight
-                    : 1;
-            let inv = invert4(viewMatrix);
-            if (e.shiftKey) {
-                inv = translate4(
-                    inv,
-                    (e.deltaX * scale) / innerWidth,
-                    (e.deltaY * scale) / innerHeight,
-                    0,
-                );
-            } else if (e.ctrlKey || e.metaKey) {
-                // inv = rotate4(inv,  (e.deltaX * scale) / innerWidth,  0, 0, 1);
-                // inv = translate4(inv,  0, (e.deltaY * scale) / innerHeight, 0);
-                // let preY = inv[13];
-                inv = translate4(
-                    inv,
-                    0,
-                    0,
-                    (-10 * (e.deltaY * scale)) / innerHeight,
-                );
-                // inv[13] = preY;
-            } else {
-                let d = 4;
-                inv = translate4(inv, 0, 0, d);
-                inv = rotate4(inv, -(e.deltaX * scale) / innerWidth, 0, 1, 0);
-                inv = rotate4(inv, (e.deltaY * scale) / innerHeight, 1, 0, 0);
-                inv = translate4(inv, 0, 0, -d);
-            }
-
-            viewMatrix = invert4(inv);
-        },
-        { passive: false },
-    );
-
-    let startX, startY, down;
-    canvas.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        startX = e.clientX;
-        startY = e.clientY;
-        down = e.ctrlKey || e.metaKey ? 2 : 1;
-    });
-    canvas.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        startX = e.clientX;
-        startY = e.clientY;
-        down = 2;
-    });
-
-    canvas.addEventListener("mousemove", (e) => {
-        e.preventDefault();
-        if (down == 1) {
-            let inv = invert4(viewMatrix);
-            let dx = (5 * (e.clientX - startX)) / innerWidth;
-            let dy = (5 * (e.clientY - startY)) / innerHeight;
-            let d = 4;
-
-            inv = translate4(inv, 0, 0, d);
-            inv = rotate4(inv, dx, 0, 1, 0);
-            inv = rotate4(inv, -dy, 1, 0, 0);
-            inv = translate4(inv, 0, 0, -d);
-            // let postAngle = Math.atan2(inv[0], inv[10])
-            // inv = rotate4(inv, postAngle - preAngle, 0, 0, 1)
-            // console.log(postAngle)
-            viewMatrix = invert4(inv);
-
-            startX = e.clientX;
-            startY = e.clientY;
-        } else if (down == 2) {
-            let inv = invert4(viewMatrix);
-            // inv = rotateY(inv, );
-            // let preY = inv[13];
-            inv = translate4(
-                inv,
-                (-10 * (e.clientX - startX)) / innerWidth,
-                0,
-                (10 * (e.clientY - startY)) / innerHeight,
-            );
-            // inv[13] = preY;
-            viewMatrix = invert4(inv);
-
-            startX = e.clientX;
-            startY = e.clientY;
-        }
-    });
-    canvas.addEventListener("mouseup", (e) => {
-        e.preventDefault();
-        down = false;
-        startX = 0;
-        startY = 0;
-    });
-
     let jumpDelta = 0;
     let vertexCount = 0;
 
@@ -995,37 +895,6 @@ async function main() {
         viewMatrix = invert4(inv);
 
         let isJumping = activeKeys.includes("Space");
-        if (
-            ["KeyJ", "KeyK", "KeyL", "KeyI"].some((k) => activeKeys.includes(k))
-        ) {
-            let d = 4;
-            inv = translate4(inv, 0, 0, d);
-            inv = rotate4(
-                inv,
-                activeKeys.includes("KeyJ")
-                    ? -0.05
-                    : activeKeys.includes("KeyL")
-                    ? 0.05
-                    : 0,
-                0,
-                1,
-                0,
-            );
-            inv = rotate4(
-                inv,
-                activeKeys.includes("KeyI")
-                    ? 0.05
-                    : activeKeys.includes("KeyK")
-                    ? -0.05
-                    : 0,
-                1,
-                0,
-                0,
-            );
-            inv = translate4(inv, 0, 0, -d);
-        }
-
-        viewMatrix = invert4(inv);
 
         if (isJumping) {
             jumpDelta = Math.min(1, jumpDelta + 0.05);
@@ -1088,7 +957,6 @@ async function main() {
             };
             fr.readAsText(file);
         } else {
-            stopLoading = true;
             fr.onload = () => {
                 splatData = new Uint8Array(fr.result);
                 console.log("Loaded", Math.floor(splatData.length / rowLength));
@@ -1111,12 +979,6 @@ async function main() {
             fr.readAsArrayBuffer(file);
         }
     };
-
-    window.addEventListener("hashchange", (e) => {
-        try {
-            viewMatrix = JSON.parse(decodeURIComponent(location.hash.slice(1)));
-        } catch (err) {}
-    });
 
     const preventDefault = (e) => {
         e.preventDefault();
