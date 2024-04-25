@@ -381,8 +381,20 @@ function createWorker(self) {
     let sortRunning;
     self.onmessage = (e) => {
         if (e.data.buffer) {
-            buffer = e.data.buffer;
-            vertexCount = e.data.vertexCount;
+            let newBuffer = e.data.buffer; // e.data.buffer is already a Uint8Array
+            if (buffer) {
+                // If buffer already exists, concatenate the new buffer with the existing buffer
+                let currentBuffer = new Uint8Array(buffer); // Create Uint8Array from existing ArrayBuffer
+                let combinedBuffer = new Uint8Array(currentBuffer.length + newBuffer.length);
+                combinedBuffer.set(currentBuffer);
+                combinedBuffer.set(newBuffer, currentBuffer.length);
+                buffer = combinedBuffer.buffer; // Store the combined ArrayBuffer back in buffer
+                vertexCount += e.data.vertexCount; // Add new vertex count to the existing vertex count
+            } else {
+                // If buffer is not set, just set the new buffer and initialize vertexCount
+                buffer = newBuffer.buffer; // Convert Uint8Array back to ArrayBuffer if needed
+                vertexCount = e.data.vertexCount;
+            }
         } else if (e.data.vertexCount) {
             vertexCount = e.data.vertexCount;
         } else if (e.data.view) {
@@ -481,6 +493,18 @@ async function main() {
     let splatData = new Uint8Array(rowLength * 500);
     let active_camera = JSON.parse(JSON.stringify(cameras[0]));  // deep copy
 
+    // Initialize WebSocket
+    const socket = io.connect('http://localhost:8000/');
+    const serverConnect = document.getElementById("server-connect");
+    socket.on('connect', () => {
+        console.log("Connected to server.");
+        serverConnect.innerText = "Connected to server. Server initializing...";
+    });
+    socket.on('connect_error', () => {
+        console.log("Connection failed.");
+        serverConnect.innerText = "Connection to server failed. Please retry.";
+    });
+
     const downsample =
         1.0;
 
@@ -499,6 +523,8 @@ async function main() {
     const focal_y = document.getElementById("focal-y");
     const inner_width = document.getElementById("inner-width");
     const inner_height = document.getElementById("inner-height");
+    const send_button = document.getElementById("send-button");
+    const prompt_box = document.getElementById("prompt-box");
 
 	let currentCameraIndex = 0;
     let projectionMatrix;
@@ -615,6 +641,10 @@ async function main() {
     window.addEventListener("resize", resize);
     resize();
 
+    send_button.addEventListener("click", () => {
+        socket.emit('scene-prompt', prompt_box.value);
+    });
+
     worker.onmessage = (e) => {
         if (e.data.buffer) {
             splatData = new Uint8Array(e.data.buffer);
@@ -666,7 +696,13 @@ async function main() {
 
     let activeKeys = [];
     window.addEventListener("keydown", (e) => {
-        // if (document.activeElement != document.body) return;
+        if (document.activeElement != document.body) return;
+        if (e.code === "KeyI") {
+            socket.emit('start', 'start signal');  // Send start signal to the server
+        }
+        if (e.code === "KeyR") {
+            socket.emit('gen', 'generate signal');  // Send generate signal to the server
+        }
         if (e.code === "KeyF") {
             active_camera.fx += 10; // Adjust 10 to your desired increment value
             active_camera.fy += 10; // Adjust 10 to your desired increment value
@@ -691,6 +727,7 @@ async function main() {
     });
 
     window.addEventListener("keyup", (e) => {
+        if (document.activeElement != document.body) return;
         activeKeys = activeKeys.filter((k) => k !== e.code);
     });
 
@@ -792,12 +829,32 @@ async function main() {
             splatData = new Uint8Array(fr.result);
             console.log("Loaded", Math.floor(splatData.length / rowLength));
             worker.postMessage({
-                buffer: splatData.buffer,
+                buffer: splatData,
                 vertexCount: Math.floor(splatData.length / rowLength),
             });
         };
         fr.readAsArrayBuffer(file);
     };
+
+    socket.on('splatData', (data) => {
+        // Handle incoming splatData
+        splatData = new Uint8Array(data);
+        console.log("Received splatData from server", Math.floor(splatData.length / rowLength));
+        worker.postMessage({
+            buffer: splatData,
+            vertexCount: Math.floor(splatData.length / rowLength),
+        });
+    });
+
+    socket.on('server-state', (msg) => {
+        console.log(msg);
+        serverConnect.innerText = msg;
+    });
+
+    socket.on('scene-prompt', (msg) => {
+        console.log(msg);
+        prompt_box.value = msg;
+    });
 
     const preventDefault = (e) => {
         e.preventDefault();
