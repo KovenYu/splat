@@ -24,6 +24,18 @@
 			a, body {
 				color: rgb(0, 0, 0);
 			}
+			#prompt-box {
+				position: absolute;
+				top: 10px;
+				left: 130px;
+				z-index: 10;
+			}
+			#send-button {
+				position: absolute;
+				top: 10px;
+				left: 10px;
+				z-index: 10;
+			}
 			#info {
 				z-index: 100;
 				position: absolute;
@@ -138,7 +150,6 @@
 				font-size: small;
 
 			}
-
 			#progress {
 				position: absolute;
 				top: 0;
@@ -153,6 +164,13 @@
 				bottom: 10px;
 				z-index: 999;
 				right: 10px;
+			}
+
+			#server-state {
+				position: absolute;
+				bottom: 10px;
+				z-index: 999;
+				left: 10px;
 			}
 
 			#caminfo {
@@ -190,36 +208,9 @@
 		<script>
 			if(location.host.includes('hf.space')) document.body.classList.add('nohf');
 		</script>
-		<div id="info">
-			<h3 class="nohf">WebGL 3D Gaussian Splat Viewer</h3>
 
-			<details>
-			<summary>Use mouse or arrow keys to navigate.</summary>
-
-<div id="instructions">movement (arrow keys)
-- left/right arrow keys to strafe side to side
-- up/down arrow keys to move forward/back
-- shift + up/down to move up/down
-- space to jump
-
-camera angle (wasd)
-- w/s/a/d to rotate camera
-- q/e to roll camera
-- i/k and j/l to orbit
-
-mouse
-- click and drag to orbit
-- right click (or ctrl/cmd key) and drag up/down to move
-
-other
-- press 0-9 to switch to one of the pre-loaded camera views
-- drag and drop .ply file to convert to .splat
-- drag and drop cameras.json to load cameras
-</div>
-
-		</details>
-			
-		</div>
+		<input type="text" id="prompt-box">
+		<button id="send-button">I want to go to ..</button>
 
 		<div id="progress"></div>
 
@@ -243,6 +234,9 @@ other
 		<div id="quality">
 			<span id="fps"></span>
 		</div>
+		<div id="server-state">
+			<span id="server-connect"></span>
+		</div>
 		<div id="caminfo">
 			<span id="camid"></span>
 			<br>
@@ -254,6 +248,8 @@ other
 			<br>
 			<span id="inner-height"></span>
 		</div>
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
 		<script src="main.js"></script>
 	</body>
 </html>
