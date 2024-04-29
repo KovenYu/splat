@@ -77,15 +77,6 @@ function getViewMatrix(camera) {
     ].flat();
     return camToWorld;
 }
-// function translate4(a, x, y, z) {
-//     return [
-//         ...a.slice(0, 12),
-//         a[0] * x + a[4] * y + a[8] * z + a[12],
-//         a[1] * x + a[5] * y + a[9] * z + a[13],
-//         a[2] * x + a[6] * y + a[10] * z + a[14],
-//         a[3] * x + a[7] * y + a[11] * z + a[15],
-//     ];
-// }
 
 function multiply4(a, b) {
     return [
@@ -701,7 +692,7 @@ async function main() {
             socket.emit('start', 'start signal');  // Send start signal to the server
         }
         if (e.code === "KeyR") {
-            socket.emit('gen', 'generate signal');  // Send generate signal to the server
+            socket.emit('gen', viewMatrix);  // Send generate signal to the server
         }
         if (e.code === "KeyF") {
             active_camera.fx += 10; // Adjust 10 to your desired increment value
@@ -753,11 +744,13 @@ async function main() {
         pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
 
         // Compute movement vector increment based on yaw
-        let dx = 0, dz = 0;
+        let dx = 0, dz = 0, dy = 0;
         if (activeKeys.includes("ArrowUp")) dz += 0.01;
         if (activeKeys.includes("ArrowDown")) dz -= 0.01;
         if (activeKeys.includes("ArrowLeft")) dx -= 0.01;
         if (activeKeys.includes("ArrowRight")) dx += 0.01;
+        if (activeKeys.includes("KeyN")) dy -= 0.01;
+        if (activeKeys.includes("KeyM")) dy += 0.01;
 
         // Convert dx and dz into world coordinates based on yaw
         let forward = [Math.sin(yaw) * dz, 0, Math.cos(yaw) * dz];
@@ -765,7 +758,7 @@ async function main() {
 
         // Update movement vector
         movement[0] += forward[0] + right[0];
-        movement[1] += forward[1] + right[1]; // This should generally remain 0 in a FPS
+        movement[1] += forward[1] + right[1] + dy; // This should generally remain 0 in a FPS
         movement[2] += forward[2] + right[2];
 
         // Apply translation based on movement vector
