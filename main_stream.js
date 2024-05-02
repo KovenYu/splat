@@ -16,6 +16,7 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext('2d');
 const serverConnect = document.getElementById("server-connect");
 const fps = document.getElementById("fps");
+const iter_number = document.getElementById("iter-number");
 const camid = document.getElementById("camid");
 const focal_x = document.getElementById("focal-x");
 const focal_y = document.getElementById("focal-y");
@@ -205,7 +206,8 @@ const update_displayed_info = (camera) => {
 };
 
 function connectToServer() {
-    socket = io.connect('http://localhost:8000/');
+    socket = io.connect('http://localhost:7776/');
+    // socket = io.connect('http://10.79.12.218:7776/');
 
     socket.on('connect', () => {
         console.log("Connected to server.");
@@ -234,6 +236,10 @@ function connectToServer() {
     socket.on('server-state', (msg) => {
         console.log(msg);
         serverConnect.innerText = msg;
+    });
+
+    socket.on('iter-number', (msg) => {
+        iter_number.innerText = msg;
     });
 
     socket.on('scene-prompt', (msg) => {
@@ -315,12 +321,12 @@ async function main() {
 
         // Compute movement vector increment based on yaw
         let dx = 0, dz = 0, dy = 0;
-        if (activeKeys.includes("ArrowUp")) dz += 0.01 * speed_factor;
-        if (activeKeys.includes("ArrowDown")) dz -= 0.01 * speed_factor;
-        if (activeKeys.includes("ArrowLeft")) dx -= 0.01 * speed_factor;
-        if (activeKeys.includes("ArrowRight")) dx += 0.01 * speed_factor;
-        if (activeKeys.includes("KeyN")) dy -= 0.01 * speed_factor;
-        if (activeKeys.includes("KeyM")) dy += 0.01 * speed_factor;
+        if (activeKeys.includes("ArrowUp")) dz += 0.02 * speed_factor;
+        if (activeKeys.includes("ArrowDown")) dz -= 0.02 * speed_factor;
+        if (activeKeys.includes("ArrowLeft")) dx -= 0.02 * speed_factor;
+        if (activeKeys.includes("ArrowRight")) dx += 0.02 * speed_factor;
+        if (activeKeys.includes("KeyN")) dy -= 0.02 * speed_factor;
+        if (activeKeys.includes("KeyM")) dy += 0.02 * speed_factor;
 
         // Convert dx and dz into world coordinates based on yaw
         let forward = [Math.sin(yaw) * dz, 0, Math.cos(yaw) * dz];
