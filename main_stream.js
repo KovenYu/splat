@@ -14,6 +14,8 @@ let projectionMatrix;
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext('2d');
+const canvas_viz = document.getElementById("canvas-viz");
+const ctx_viz = canvas_viz.getContext('2d');
 const serverConnect = document.getElementById("server-connect");
 const fps = document.getElementById("fps");
 const iter_number = document.getElementById("iter-number");
@@ -206,7 +208,7 @@ const update_displayed_info = (camera) => {
 };
 
 function connectToServer() {
-    socket = io.connect('http://localhost:7776/');
+    socket = io.connect('http://localhost:7777/');
     // socket = io.connect('http://10.79.12.218:7776/');
 
     socket.on('connect', () => {
@@ -228,6 +230,20 @@ function connectToServer() {
         const img = new Image();
         img.onload = () => {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(imageURL);
+        };
+        img.src = imageURL;
+    });
+
+    socket.on('viz', (data) => {
+        // Receive the rendered image data from the server
+        const blob = new Blob([data], { type: 'image/jpeg' });
+        const imageURL = URL.createObjectURL(blob);
+
+        // Update the canvas with the received image
+        const img = new Image();
+        img.onload = () => {
+            ctx_viz.drawImage(img, 0, 0, canvas.width, canvas.height);
             URL.revokeObjectURL(imageURL);
         };
         img.src = imageURL;
@@ -271,6 +287,16 @@ async function main() {
             socket.emit('start', 'start signal');  // Send start signal to the server
         }
         if (e.code === "KeyR") {
+            let inv = invert4(defaultViewMatrix);
+            pitch = 0;
+            inv = translate4(inv, ...movement);
+
+            // Apply rotations
+            inv = rotate4(inv, yaw, 0, 1, 0); // Yaw around the Y-axis
+            inv = rotate4(inv, pitch, 1, 0, 0); // Pitch around the X-axis
+
+            // Compute the view matrix
+            viewMatrix = invert4(inv);
             socket.emit('gen', viewMatrix);  // Send generate signal to the server
         }
         if (e.code === "KeyF") {
