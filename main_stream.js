@@ -5,7 +5,7 @@ let defaultViewMatrix = [-1,0,0,0,
 
 let yaw = 0;   // Rotation around the Y-axis
 let pitch = 0; // Rotation around the X-axis
-let movement =  [0, 0,0]; // Movement vector initialized to 0,0,0
+let movement =  [0, 0, 0]; // Movement vector initialized to 0,0,0
 
 let viewMatrix = defaultViewMatrix;
 let socket;
@@ -44,28 +44,15 @@ const cameras = [
     {
         id: 1,
         position: [
-            0, 30, 10
-        ],
-        rotation: [
-            [-1, 0, 0],
-            [0., 0, -1],
-            [0, -1, 0],
-        ],
-        fy: 500,
-        fx: 500,
-    },
-    {
-        id: 2,
-        position: [
             0, 0, 0   // +left, +up, +forward
         ],
         rotation: [
-            [1, 0, 0],
-            [0., 1, 0],
+            [-1, 0, 0],
+            [0., -1, 0],
             [0, 0, 1],
         ],
-        fy: 990,
-        fx: 990,
+        fy: 1000,
+        fx: 1000,
     },
 ];
 
@@ -84,6 +71,18 @@ function getViewMatrix(camera) {
         ],
     ].flat();
     return camToWorld;
+}
+
+function extractPositionFromViewMatrix(matrix) {
+    return [-matrix[12], -matrix[13], -matrix[14]];
+}
+
+function extractRotationFromViewMatrix(matrix) {
+    return [
+        [matrix[0], matrix[1], matrix[2]],
+        [matrix[4], matrix[5], matrix[6]],
+        [matrix[8], matrix[9], matrix[10]]
+    ];
 }
 
 function multiply4(a, b) {
@@ -297,6 +296,107 @@ async function main() {
 
             // Compute the view matrix
             viewMatrix = invert4(inv);
+
+            socket.emit('gen', viewMatrix);  // Send generate signal to the server
+        }
+        if (e.code === "KeyT") {
+            let inv = invert4(defaultViewMatrix);
+            pitch = 0;
+            
+            let backwardMovement = [0, 0, -0.8];
+            let combinedMovement = [
+                movement[0] + backwardMovement[0],
+                movement[1] + backwardMovement[1],
+                movement[2] + backwardMovement[2]
+            ];
+
+            inv = translate4(inv, ...combinedMovement);
+
+            // Apply rotations
+            inv = rotate4(inv, yaw, 0, 1, 0); // Yaw around the Y-axis
+            inv = rotate4(inv, pitch, 1, 0, 0); // Pitch around the X-axis
+
+            // Compute the view matrix
+            viewMatrix = invert4(inv);
+
+            socket.emit('gen', viewMatrix);  // Send generate signal to the server
+        }
+        if (e.code === "KeyY") {
+            let inv = invert4(defaultViewMatrix);
+            pitch = 0;
+            let leftTurnAngle = 20 * Math.PI / 180;
+
+            inv = translate4(inv, ...movement);
+
+            // Apply rotations
+            inv = rotate4(inv, yaw - leftTurnAngle, 0, 1, 0); // Yaw around the Y-axis
+            inv = rotate4(inv, pitch, 1, 0, 0); // Pitch around the X-axis
+
+            // Compute the view matrix
+            viewMatrix = invert4(inv);
+
+            socket.emit('gen', viewMatrix);  // Send generate signal to the server
+        }
+        if (e.code === "KeyU") {
+            let inv = invert4(defaultViewMatrix);
+            pitch = 0;
+            let rightTurnAngle = 20 * Math.PI / 180;
+
+            inv = translate4(inv, ...movement);
+
+            // Apply rotations
+            inv = rotate4(inv, yaw + rightTurnAngle, 0, 1, 0); // Yaw around the Y-axis
+            inv = rotate4(inv, pitch, 1, 0, 0); // Pitch around the X-axis
+
+            // Compute the view matrix
+            viewMatrix = invert4(inv);
+
+            socket.emit('gen', viewMatrix);  // Send generate signal to the server
+        }
+        if (e.code === "KeyI") {
+            let inv = invert4(defaultViewMatrix);
+            pitch = 0;
+            let leftTurnAngle = 15 * Math.PI / 180;
+
+            let backwardMovement = [0, 0, -0.5];
+            let combinedMovement = [
+                movement[0] + backwardMovement[0],
+                movement[1] + backwardMovement[1],
+                movement[2] + backwardMovement[2]
+            ];
+
+            inv = translate4(inv, ...combinedMovement);
+
+            // Apply rotations
+            inv = rotate4(inv, yaw - leftTurnAngle, 0, 1, 0); // Yaw around the Y-axis
+            inv = rotate4(inv, pitch, 1, 0, 0); // Pitch around the X-axis
+
+            // Compute the view matrix
+            viewMatrix = invert4(inv);
+
+            socket.emit('gen', viewMatrix);  // Send generate signal to the server
+        }
+        if (e.code === "KeyO") {
+            let inv = invert4(defaultViewMatrix);
+            pitch = 0;
+            let rightTurnAngle = 15 * Math.PI / 180;
+
+            let backwardMovement = [0, 0, -0.5];
+            let combinedMovement = [
+                movement[0] + backwardMovement[0],
+                movement[1] + backwardMovement[1],
+                movement[2] + backwardMovement[2]
+            ];
+
+            inv = translate4(inv, ...combinedMovement);
+
+            // Apply rotations
+            inv = rotate4(inv, yaw + rightTurnAngle, 0, 1, 0); // Yaw around the Y-axis
+            inv = rotate4(inv, pitch, 1, 0, 0); // Pitch around the X-axis
+
+            // Compute the view matrix
+            viewMatrix = invert4(inv);
+
             socket.emit('gen', viewMatrix);  // Send generate signal to the server
         }
         if (e.code === "KeyF") {
