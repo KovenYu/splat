@@ -178,7 +178,7 @@ const use_extrinsics = (camera) => {
     yaw = 0;
     pitch = 0;
     movement = [0, 0, 0];
-    // defaultViewMatrix = viewMatrix;
+    defaultViewMatrix = viewMatrix;
 };
 
 const use_camera = (camera) => {
