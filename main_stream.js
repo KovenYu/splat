@@ -41,19 +41,6 @@ const cameras = [
         fy: 1000,
         fx: 1000,
     },
-    {
-        id: 1,
-        position: [
-            0, 0, 0   // +left, +up, +forward
-        ],
-        rotation: [
-            [-1, 0, 0],
-            [0., -1, 0],
-            [0, 0, 1],
-        ],
-        fy: 1000,
-        fx: 1000,
-    },
 ];
 
 function getViewMatrix(camera) {
@@ -191,6 +178,7 @@ const use_extrinsics = (camera) => {
     yaw = 0;
     pitch = 0;
     movement = [0, 0, 0];
+    defaultViewMatrix = viewMatrix;
 };
 
 const use_camera = (camera) => {
@@ -269,6 +257,18 @@ function sendCameraPose() {
     }
 }
 
+function extractPositionFromViewMatrix(matrix) {
+    return [-matrix[12], -matrix[13], -matrix[14]];
+}
+
+function extractRotationFromViewMatrix(matrix) {
+    return [
+        [matrix[0], matrix[1], matrix[2]],
+        [matrix[4], matrix[5], matrix[6]],
+        [matrix[8], matrix[9], matrix[10]]
+    ];
+}
+
 // Main function
 async function main() {
     connectToServer();
@@ -296,6 +296,22 @@ async function main() {
 
             // Compute the view matrix
             viewMatrix = invert4(inv);
+            const newPosition = extractPositionFromViewMatrix(viewMatrix);
+            const newRotation = extractRotationFromViewMatrix(viewMatrix);
+            
+            const camera_tmp = {
+                id: cameras.length,
+                position: newPosition,
+                rotation: newRotation,
+                fy: 1000,
+                fx: 1000,
+            };
+            console.log("camera_length: " + cameras.length);
+            cameras.push(camera_tmp);
+            if (cameras.length > 10) {
+                console.log("camera_length exeeded: " + cameras.length);
+                cameras.splice(1, 1);
+            }
 
             socket.emit('gen', viewMatrix);  // Send generate signal to the server
         }
