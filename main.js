@@ -3,7 +3,10 @@ let defaultViewMatrix = [-1,0,0,0,
                         0,-1,0,0,
                         0,0,1,0,
                         0,0,0,1];
-
+// let defaultViewMatrix = [1,0,0,0,
+//                             0,1,0,0,
+//                             0,0,1,0,
+//                             0,0,0,1];
 let yaw = 0;   // Rotation around the Y-axis
 let pitch = 0; // Rotation around the X-axis
 let movement =  [0, 0,0]; // Movement vector initialized to 0,0,0
