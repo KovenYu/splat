@@ -10,6 +10,8 @@ let defaultViewMatrix = [-1,0,0,0,
 let yaw = 0;   // Rotation around the Y-axis
 let pitch = 0; // Rotation around the X-axis
 let movement =  [0, 0,0]; // Movement vector initialized to 0,0,0
+let bbox = [-9999, 9999, -9999, 9999, -9999, 9999, -9999, 9999];
+let radius = 9999;
 
 const cameras = [
     {
@@ -745,6 +747,8 @@ async function main() {
         if (activeKeys.includes("KeyS")) pitch -= 0.005;
 
         pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+        pitch = Math.max(bbox[4], Math.min(bbox[5], pitch));
+        yaw = Math.max(bbox[6], Math.min(bbox[7], yaw));
 
         // Compute movement vector increment based on yaw
         let dx = 0, dz = 0, dy = 0;
@@ -761,8 +765,16 @@ async function main() {
 
         // Update movement vector
         movement[0] += forward[0] + right[0];
+        movement[0] = Math.max(bbox[0], Math.min(bbox[1], movement[0]));
         movement[1] += forward[1] + right[1] + dy; // This should generally remain 0 in a FPS
         movement[2] += forward[2] + right[2];
+        movement[2] = Math.max(bbox[2], Math.min(bbox[3], movement[2]));
+
+        // If the distance of movement if higher than radius, then normalize it
+        let distance = Math.hypot(movement[0], movement[1], movement[2]);
+        if (distance > radius) {
+            movement = movement.map((k) => k / distance * radius);
+        }
 
         // Apply translation based on movement vector
         inv = translate4(inv, ...movement);
@@ -821,6 +833,45 @@ async function main() {
 
     const selectFile = (file) => {
         const fr = new FileReader();
+
+        if (file.name.includes('minecraft')) {
+            movement = [0.2, 0, -3.2];
+            bbox = [-0.5, 0.9, -3.2, 0.8, -0.2, 0.16, -0.2, 0.3];
+            active_camera.fx = active_camera.fy = 570;
+            radius = 9999;
+        }
+        else if (file.name.includes('campus_2')) {
+            movement = [0.2, 0, -1.2];
+            bbox = [-1.5, 1.5, -3.2, 0.8, -0.2, 0.16, -1.5, 1.5];
+            active_camera.fx = active_camera.fy = 700;
+            radius = 9999;
+        }
+        else if (file.name.includes('zelda')) {
+            movement = [0.0, 0, -3.2];
+            bbox = [-0.2, 0.3, -3.2, 0.2, -0.2, 0.16, -0.12, 0.3];
+            active_camera.fx = active_camera.fy = 1700;
+            radius = 9999;
+        }
+        else if (file.name.includes('venice')) {
+            movement = [0, 0, 0];
+            bbox = [-9999, 9999, -9999, 9999, -0.03, 0.3, -9999, 9999];
+            active_camera.fx = active_camera.fy = 960;
+            radius = 0.1;
+        }
+        else if (file.name.includes('disney')) {
+            movement = [0, 0, 0];
+            bbox = [-9999, 9999, -9999, 9999, -0.1, 0.35, -9999, 9999];
+            active_camera.fx = active_camera.fy = 900;
+            radius = 0.15;
+        }
+        else {
+            movement = [0, 0, 0];
+            bbox = [-9999, 9999, -9999, 9999, -9999, 9999, -9999, 9999];  // minx, maxx, minz, maxz, minpitch, maxpitch, minyaw, maxyaw
+            radius = 9999;
+            active_camera.fx = active_camera.fy = 960;
+        }
+        use_intrinsics(active_camera);
+        
         fr.onload = () => {
             splatData = new Uint8Array(fr.result);
             console.log("Loaded", Math.floor(splatData.length / rowLength));
